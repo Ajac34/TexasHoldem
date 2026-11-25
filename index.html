@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f1419">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="德州模拟器">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="manifest" href="manifest.json">
+  <title>德州扑克 · 真实牌桌模拟器</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="four-color">
+  <div id="loading">正在计算 169 种起手牌排名（仅首次运行需要几秒）…</div>
+
+  <!-- ================= 大厅 ================= -->
+  <section id="lobby" class="hidden">
+    <header class="lobby-head">
+      <div>
+        <h1>德州扑克 · 真实牌桌模拟器</h1>
+        <p class="sub">不是 GTO 训练器：对手处在「松/紧 × 凶/弱」风格平面上，还有高低不同的技术水平。级别越高，鲨鱼越多。管好你的资金。</p>
+      </div>
+      <div class="global-opts">
+        <label class="chk"><input type="checkbox" id="opt-4color" checked> 四色牌</label>
+        <label class="chk"><input type="checkbox" id="opt-hint" checked> 胜率提示</label>
+        <label class="chk"><input type="checkbox" id="opt-reveal"> 显示对手真实风格</label>
+        <label>速度
+          <select id="opt-speed">
+            <option value="normal">正常</option>
+            <option value="fast">快</option>
+            <option value="slow">慢</option>
+          </select>
+        </label>
+        <button id="lobby-ui-btn">⚙ 界面设置</button>
+        <span id="acct-box" class="hidden"></span>
+      </div>
+    </header>
+
+    <div class="tabs lobby-tabs" id="lobby-tabs">
+      <button data-ltab="career" class="active">职业生涯</button>
+      <button data-ltab="db">玩家数据库</button>
+      <button data-ltab="review">牌局复盘</button>
+      <button data-ltab="practice">自由练习</button>
+      <button data-ltab="lan">局域网对战</button>
+    </div>
+
+    <div id="lt-career" class="ltab"></div>
+    <div id="lt-db" class="ltab hidden"></div>
+    <div id="lt-review" class="ltab hidden"></div>
+    <div id="lt-lan" class="ltab hidden"></div>
+
+    <div id="lt-practice" class="ltab hidden">
+      <p class="note">自由练习：不消耗资金，可以自定义每个对手的风格。适合针对某种对手专项练习。</p>
+      <div class="lobby-grid">
+        <div class="panel">
+          <h2>1. 游戏模式</h2>
+          <div class="seg" id="mode-seg">
+            <button data-mode="cash" class="active">现金桌</button>
+            <button data-mode="tournament">锦标赛（SNG）</button>
+          </div>
+          <p class="note" id="mode-note"></p>
+
+          <div id="cash-opts" class="opts">
+            <label>盲注
+              <select id="opt-blinds">
+                <option value="1/2">1 / 2</option>
+                <option value="2/5">2 / 5</option>
+                <option value="5/10">5 / 10</option>
+              </select>
+            </label>
+            <label>买入
+              <select id="opt-buyin">
+                <option value="100">100 BB</option>
+                <option value="50">50 BB（短码）</option>
+                <option value="200">200 BB（深码）</option>
+              </select>
+            </label>
+            <label>抽水
+              <select id="opt-rake">
+                <option value="0">无抽水</option>
+                <option value="0.05" selected>5%，封顶 3BB</option>
+                <option value="0.1">10%，封顶 3BB（线下常见）</option>
+              </select>
+            </label>
+            <label class="chk"><input type="checkbox" id="opt-dynamic" checked> 玩家流动（对手会离桌，新人从对手池中入座）</label>
+          </div>
+
+          <div id="tour-opts" class="opts hidden">
+            <label>起始筹码
+              <select id="opt-tstack">
+                <option value="1500">1500（75 BB）</option>
+                <option value="3000">3000（150 BB）</option>
+                <option value="1000">1000（50 BB，快速）</option>
+              </select>
+            </label>
+            <label>升盲速度
+              <select id="opt-tlevel">
+                <option value="10">每 10 手</option>
+                <option value="6">每 6 手（Turbo）</option>
+                <option value="15">每 15 手（慢速）</option>
+              </select>
+            </label>
+          </div>
+
+          <h2>2. 牌桌</h2>
+          <div class="opts">
+            <label>人数
+              <select id="opt-size">
+                <option value="6">6 人桌</option>
+                <option value="9">9 人桌</option>
+              </select>
+            </label>
+            <label>对手池
+              <select id="opt-pool"></select>
+            </label>
+            <p class="note" id="pool-note"></p>
+            <label class="chk"><input type="checkbox" id="opt-observer"> 观战模式（你不上桌）</label>
+          </div>
+
+          <div class="lobby-actions">
+            <button id="start-btn" class="primary big">开始练习</button>
+            <button id="calib-btn">校准测试（AI 自对局 1500 手）</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>对手风格地图 <small>拖动圆点即可改变对应座位的风格</small></h2>
+          <svg id="lobby-map" class="style-map" viewBox="0 0 400 400"></svg>
+          <div class="row">
+            <button id="reroll-btn">按对手池重新随机</button>
+          </div>
+          <table id="seat-list" class="seat-list"></table>
+        </div>
+      </div>
+      <div id="calib-result" class="panel hidden"></div>
+    </div>
+  </section>
+
+  <!-- ================= 牌桌 ================= -->
+  <section id="game" class="hidden">
+    <header id="topbar">
+      <div id="top-info"></div>
+      <div class="top-ctrls">
+        <button id="btn-ui" title="调整牌面、筹码、座位大小，动画、咪牌、音效">⚙ 界面</button>
+        <button id="btn-mark" title="标记本手，之后可在“牌局复盘”中分析">☆ 标记本手</button>
+        <label class="chk"><input type="checkbox" id="tg-reveal"> 显示风格</label>
+        <label class="chk"><input type="checkbox" id="tg-hint"> 胜率提示</label>
+        <label class="chk"><input type="checkbox" id="tg-auto" checked> 自动下一手</label>
+        <select id="tg-speed">
+          <option value="normal">正常速度</option>
+          <option value="fast">快</option>
+          <option value="slow">慢</option>
+        </select>
+        <button id="btn-rebuy" class="hidden">补码</button>
+        <button id="btn-pause">暂停</button>
+        <button id="btn-lobby">离桌</button>
+      </div>
+    </header>
+
+    <div id="game-main">
+      <div id="table-col">
+        <div id="table">
+          <div id="felt">
+            <div id="pot"></div>
+            <div id="board"></div>
+            <div id="hint"></div>
+          </div>
+          <div id="seats"></div>
+          <div id="fx"></div>
+        </div>
+        <div id="action-bar">
+          <div id="action-status"></div>
+          <div id="action-controls" class="hidden">
+            <div class="presets" id="presets"></div>
+            <div class="raise-row">
+              <input type="range" id="raise-slider">
+              <input type="number" id="raise-amt">
+            </div>
+            <div class="btn-row">
+              <button id="btn-fold" class="act fold">弃牌 <kbd>F</kbd></button>
+              <button id="btn-call" class="act call">过牌 <kbd>C</kbd></button>
+              <button id="btn-raise" class="act raise">加注 <kbd>R</kbd></button>
+            </div>
+          </div>
+          <div id="next-controls" class="hidden">
+            <button id="btn-next" class="primary">下一手 <kbd>空格</kbd></button>
+          </div>
+        </div>
+      </div>
+
+      <aside id="side">
+        <div class="tabs" id="side-tabs">
+          <button data-tab="map" class="active">风格地图</button>
+          <button data-tab="hud">HUD 数据</button>
+          <button data-tab="log">牌局记录</button>
+          <button data-tab="tour" id="tab-tour-btn">赛况</button>
+        </div>
+        <div class="tab-body" id="tab-map">
+          <svg id="game-map" class="style-map" viewBox="0 0 400 400"></svg>
+          <div class="legend" id="map-legend"></div>
+        </div>
+        <div class="tab-body hidden" id="tab-hud"></div>
+        <div class="tab-body hidden" id="tab-log"><div id="log"></div></div>
+        <div class="tab-body hidden" id="tab-tour"></div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ================= 复盘 ================= -->
+  <section id="review" class="hidden">
+    <header id="review-top">
+      <div id="review-title"></div>
+      <div class="top-ctrls">
+        <label class="chk"><input type="checkbox" id="rv-god"> 上帝视角（显示对手真实手牌）</label>
+        <button id="rv-back">返回大厅</button>
+      </div>
+    </header>
+    <div id="review-main">
+      <div id="review-left"></div>
+      <div id="review-right"></div>
+    </div>
+  </section>
+
+  <div id="modal" class="hidden">
+    <div class="modal-box">
+      <div id="modal-content"></div>
+      <div id="modal-buttons"></div>
+    </div>
+  </div>
+
+  <script src="js/cards.js"></script>
+  <script src="js/equity.js"></script>
+  <script src="js/profiles.js"></script>
+  <script src="js/stats.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/personas.js"></script>
+  <script src="js/career.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/gto.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/table.js"></script>
+  <script src="js/lobby.js"></script>
+  <script src="js/review.js"></script>
+  <script src="js/net.js"></script>
+  <script src="js/api.js"></script>
+</body>
+</html>
